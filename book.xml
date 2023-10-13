@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<library>
+    <book>
+        <title>The Alchemist</title>
+        <author>Paulo Coelho</author>
+        <attributes>
+            <attribute name="Philosophical Journey">Follows Santiago, a shepherd, on his journey to discover a treasure by the Egyptian pyramids. An allegory about pursuing one's dreams.</attribute>
+            <attribute name="Universal Appeal">Translated into numerous languages and a global bestseller.</attribute>
+        </attributes>
+    </book>
+
+    <book>
+        <title>Sapiens: A Brief History of Humankind</title>
+        <author>Yuval Noah Harari</author>
+        <attributes>
+            <attribute name="Broad Overview">Chronicles the evolution of Homo sapiens from ancient times to the modern era, touching upon various aspects like culture, science, and politics.</attribute>
+            <attribute name="Provocative Insights">Harari provides thought-provoking insights on capitalism, religion, and the possible future paths for humanity.</attribute>
+        </attributes>
+    </book>
+
+    <book>
+        <title>OpenIntro Statistics, 4th Edition</title>
+        <authors>
+            <author>David M Diez</author>
+            <author>Christopher D Barr</author>
+            <author>Mine Çetinkaya-Rundel</author>
+        </authors>
+        <attributes>
+            <attribute name="Accessible Content">Known for its beginner-friendly approach to statistical concepts.</attribute>
+            <attribute name="Open Source">Available for free online, embodying a commitment to accessible education.</attribute>
+            <attribute name="Diverse Applications">Features a wide range of real-world data and examples, emphasizing the practical application of statistics.</attribute>
+        </attributes>
+    </book>
+</library>
