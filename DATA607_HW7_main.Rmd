@@ -1,0 +1,203 @@
+---
+title: "DATA607_HW7"
+author: "Haig Bedros"
+date: "2023-10-13"
+output: html_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Introduction
+
+This document demonstrates how to load data from three different sources: HTML, XML, and JSON. All files are hosted on GitHub for easy access.
+
+## Data Source URLs
+
+1. **HTML**: [GitHub Raw Link for HTML](https://raw.githubusercontent.com/your_username/your_repo_name/path_to_books.html)
+2. **XML**: [GitHub Raw Link for XML](https://raw.githubusercontent.com/your_username/your_repo_name/path_to_books.xml)
+3. **JSON**: [GitHub Raw Link for JSON](https://raw.githubusercontent.com/your_username/your_repo_name/path_to_books.json)
+
+```{r packages, include=FALSE}
+install.packages(c("rvest", "xml2", "jsonlite", "stringr", "knitr", "kableExtra"), repos = "https://cloud.r-project.org/", quietly = TRUE)
+```
+
+```{r libraries, include=FALSE}
+# Loading necessary libraries
+library(rvest)
+library(xml2)
+library(jsonlite)
+library(stringr)
+library(knitr)
+library(kableExtra)
+```
+
+# HTML File:
+
+```{r html}
+# Raw GitHub URLs
+url_html <- "https://raw.githubusercontent.com/hbedros/data607_hw7/main/book.html"
+
+# Loading from HTML
+html_file <- read_html(url_html)
+
+# Extracting title of the document
+doc_title <- html_file %>% html_node("title") %>% html_text()
+
+# Initialize lists to store extracted details
+book_titles <- list()
+all_authors <- list()
+all_attributes <- list()
+
+# Find all the book divs
+book_divs <- html_file %>% html_nodes(".book")
+
+# Initialize a list to store data frames for each book
+dfs <- list()
+
+# Loop through each book div
+for (i in seq_along(book_divs)) {
+  # Extract details from the current book div
+  book_title <- book_divs[[i]] %>% html_node("h1") %>% html_text()
+  author <- book_divs[[i]] %>% html_node("h2") %>% html_text()
+  
+  # Clean up and split the author string
+  author_cleaned <- gsub("Authors?:", "", author, ignore.case = TRUE) %>% trimws()
+  authors_list <- unlist(str_split(author_cleaned, ",| and ")) %>% trimws()
+  
+  full_attributes <- book_divs[[i]] %>% html_nodes("p") %>% html_text()
+  
+  # Extracting only the first main point from each block of text
+  attributes_list <- sapply(full_attributes, function(attr) {
+    str_extract(attr, "^[^:]+(?=:)")
+  })
+  
+  # Joining authors and attribute heads using ";"
+  concatenated_authors <- paste(authors_list, collapse="; ")
+  concatenated_attributes <- paste(attributes_list, collapse="; ")
+  
+  # Creating a data frame with concatenated values
+  dfs[[i]] <- data.frame(
+    book_title = book_title,
+    author = concatenated_authors,
+    attributes = concatenated_attributes,
+    row.names = NULL
+  )
+}
+
+# Bind all book data together
+df_books <- do.call(rbind, dfs)
+
+# Using kable() to display the table in a cleaner format
+knitr::kable(df_books, 
+             caption = "Books Information from HTML", 
+             align = 'c') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+```
+
+# XML File:
+
+```{r xml}
+# Raw GitHub URL for XML
+url_xml <- "https://raw.githubusercontent.com/hbedros/data607_hw7/main/book.xml"
+
+# Loading from XML
+xml_file <- read_xml(url_xml)
+
+# Extract all books
+book_nodes <- xml_file %>% xml_find_all(".//book")
+
+# Function to safely extract a child node's text. If the node doesn't exist, it returns NA
+extract_safe <- function(node, path) {
+  result <- node %>% xml_find_first(path) %>% xml_text(trim = TRUE)
+  if(length(result) == 0) return(NA)
+  return(result)
+}
+
+# Extract data from each book
+books_data <- lapply(book_nodes, function(book) {
+  title <- extract_safe(book, ".//title")
+  author <- extract_safe(book, ".//author")
+  
+  # Extracting attribute names (using the 'name' attribute of the attribute node)
+  attributes_nodes <- xml_find_all(book, ".//attributes/attribute")
+  attribute_names <- sapply(attributes_nodes, xml_attr, "name")
+  attributes_combined <- paste(attribute_names, collapse = ";")
+  
+  data.frame(
+    book_title = title,
+    author = author,
+    attributes = attributes_combined,
+    stringsAsFactors = FALSE
+  )
+})
+
+# Bind all book data together
+df_books_xml <- do.call(rbind, books_data)
+
+# Using kable() to display the table in a cleaner format
+knitr::kable(df_books_xml, 
+             caption = "Books Information from XML", 
+             align = 'c') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+```
+
+# JSON File:
+
+```{r json}
+
+# Raw GitHub URL for JSON
+url_json <- "https://raw.githubusercontent.com/hbedros/data607_hw7/main/book.json"
+
+# Loading from JSON
+json_data <- fromJSON(url_json)
+
+# Print structure of the first book
+str(json_data$library$books[[1]])
+
+# Flatten the JSON
+flattened_json <- flatten(json_data$library$books)
+
+# View the flattened structure
+str(flattened_json)
+
+
+# Convert author and authors column into a single authors column
+flattened_json$consolidated_authors <- ifelse(is.na(flattened_json$author), 
+                                              sapply(flattened_json$authors, paste, collapse = "; "), 
+                                              flattened_json$author)
+
+# Remove the original author and authors columns
+flattened_json$author <- NULL
+flattened_json$authors <- NULL
+
+# Create a function to consolidate the attributes
+consolidate_attributes <- function(row) {
+  # Extract only the attribute columns (ignoring title and authors)
+  attributes <- row[grepl("^attributes\\.", names(row))]
+  
+  # Get the names of the attributes
+  attribute_names <- gsub("^attributes\\.", "", names(attributes))
+  
+  # Combine non-NA attributes
+  combined_attributes <- paste(attribute_names[!is.na(attributes)], collapse = "; ")
+  
+  return(combined_attributes)
+}
+
+# Apply the function to each row
+flattened_json$consolidated_attributes <- apply(flattened_json, 1, consolidate_attributes)
+
+# Create the final data frame
+final_df <- flattened_json[, c("title", "consolidated_authors", "consolidated_attributes"), drop = FALSE]
+colnames(final_df) <- c("Title", "Authors", "Attributes")
+
+
+# Using kable() to display the table in a cleaner format
+knitr::kable(final_df, 
+             caption = "Books Information from JSON", 
+             align = 'c') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+```
